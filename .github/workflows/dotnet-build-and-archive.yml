@@ -41,29 +41,13 @@ jobs:
           run: zip -r mealplanner-${{ env.VERSION }}.zip ./publish/*
 
         # Create a release
-        - name: Create GitHub Release
+        - name: Create Release
           if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
-          id: create_release
-          uses: actions/create-release@v1
-          env:
-            GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          uses: softprops/action-gh-release@v1
           with:
+            files: ./mealplanner-${{ env.VERSION }}.zip
+            token: ${{ secrets.GITHUB_TOKEN }}
             tag_name: ${{ env.VERSION }}
-            release_name: Release ${{ env.VERSION }}
             body: "Release ${{ env.VERSION }}"
-            draft: false
-            prerelease: false
-
-        # Upload the zip file to the release
-        - name: Upload Release Asset
-          if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
-          uses: actions/upload-release-asset@v1
-          env:
-            GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          with:
-            upload_url: ${{ steps.create_release.outputs.upload_url }}
-            asset_path: ./mealplanner-${{ env.VERSION }}.zip
-            asset_name: mealplanner-${{ env.VERSION }}.zip
-            asset_content_type: application/zip
 
         
