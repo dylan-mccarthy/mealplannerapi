@@ -1,0 +1,69 @@
+name: Build and Archive App
+
+on:
+    push:
+        branches:
+            - main
+    pull_request:
+        branches:
+            - main
+
+jobs:
+    build:
+        runs-on: ubuntu-latest
+
+        env:
+            VERSION: 1.0.$(Build.BuildId)
+
+        steps:
+        - name: Checkout code
+          uses: actions/checkout@v3
+
+        - name: Setup .NET SDK
+          uses: actions/setup-dotnet@v3
+          with:
+            dotnet-version: 8.0.x
+
+        - name: Restore dependencies
+          run: dotnet restore
+
+        - name: Build
+          run: dotnet build --configuration Release --no-restore
+
+        # Publish if the branch is main and not a pull request
+        - name: Publish
+          if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+          run: dotnet publish --configuration Release --output ./publish
+        
+        # Zip the published app
+        - name: Zip
+          if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+          run: zip -r mealplanner-${{ env.VERSION }}.zip ./publish/*
+
+        # Create a release
+        - name: Create GitHub Release
+          if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+          id: create_release
+          uses: actions/create-release@v1
+          env:
+            GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          with:
+            tag_name: ${{ env.VERSION }}
+            release_name: Release ${{ env.VERSION }}
+            body: "Release ${{ env.VERSION }}"
+            draft: false
+            prerelease: false
+
+        # Upload the zip file to the release
+        - name: Upload Release Asset
+          if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+          uses: actions/upload-release-asset@v1
+          env:
+            GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          with:
+            upload_url: ${{ steps.create_release.outputs.upload_url }}
+            asset_path: ./mealplanner-${{ env.VERSION }}.zip
+            asset_name: mealplanner-${{ env.VERSION }}.zip
+            asset_content_type: application/zip
+
+        
